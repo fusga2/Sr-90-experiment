@@ -1,0 +1,6 @@
+{
+  "name": "Sr-90 Lab Simulator",
+  "description": "Simulation of Sr-90 Beta Radiation, PMMA interaction, and Bremsstrahlung detection.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
