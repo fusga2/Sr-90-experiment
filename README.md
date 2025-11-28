@@ -1,20 +1,10 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Sr-90 Experiment (Standalone HTML)
 
-# Run and deploy your AI Studio app
+This version runs without build tools or npm. Just open `index.html` in a modern browser to see the Sr-90 simulation with the canvas animation, detector controls, and dose-rate display.
 
-This contains everything you need to run your app locally.
+## How to Run
 
-View your app in AI Studio: https://ai.studio/apps/drive/1s58QO4eiH4QW9C_yQBMU8bIM010lgvif
+1. Download or clone the repository.
+2. Open `index.html` directly in your browser (double-click or drag it onto a tab). No additional setup is needed.
 
-## Run Locally
-
-**Prerequisites:**  Node.js
-
-
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+If you want to tweak the simulation logic or styling, edit `simulator.js` or `index.html` and refresh the page.
