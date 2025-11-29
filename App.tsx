@@ -16,8 +16,8 @@ const FLOOR_Y = CANVAS_HEIGHT - 20;
 const PX_PER_CM = 4;
 
 const SOURCE_X = 80; // Left side
-const SOURCE_TO_PMMA_CM = 10;
-const PMMA_X = SOURCE_X + (SOURCE_TO_PMMA_CM * PX_PER_CM); // 10cm gap
+const SOURCE_TO_PMMA_CM = 15;
+const PMMA_X = SOURCE_X + (SOURCE_TO_PMMA_CM * PX_PER_CM); // Gap between source and PMMA
 
 const PMMA_THICKNESS = 5 * (PX_PER_CM / 10); // 5mm scaled (2 pixels - strictly visual, made slightly thicker for visibility)
 const PMMA_VISUAL_THICKNESS = 10; 
@@ -25,6 +25,7 @@ const PMMA_HEIGHT = 150;
 
 const DETECTOR_WIDTH = 30;
 const DETECTOR_HEIGHT = 60;
+const MAX_DISTANCE_CM = 150;
 
 // Physics Constants provided by user
 const K_CONST = 0.170; // m^2 * uSv/h
@@ -50,6 +51,7 @@ const App: React.FC = () => {
   const [sourceOpen, setSourceOpen] = useState<boolean>(true);
   const [doseRate, setDoseRate] = useState<string>("0.150");
   const [showHeatmap, setShowHeatmap] = useState<boolean>(false);
+  const [isDraggingDetector, setIsDraggingDetector] = useState<boolean>(false);
 
   // Refs for simulation
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -341,7 +343,7 @@ const App: React.FC = () => {
     ctx.lineTo(PMMA_X, CENTER_Y + 50);
     ctx.stroke();
     ctx.fillStyle = '#555';
-    ctx.fillText("10 cm", SOURCE_X + 35 + ((PMMA_X - (SOURCE_X+35))/2), CENTER_Y + 65);
+    ctx.fillText(`${SOURCE_TO_PMMA_CM} cm`, SOURCE_X + 35 + ((PMMA_X - (SOURCE_X+35))/2), CENTER_Y + 65);
 
     // 4. Draw Detector
     const detectorX = PMMA_X + PMMA_VISUAL_THICKNESS + (distanceCm * PX_PER_CM);
@@ -468,6 +470,53 @@ const App: React.FC = () => {
 
   // --- Handlers ---
 
+  const updateDistanceFromPointer = useCallback((clientX: number) => {
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const canvasX = (clientX - rect.left) * (CANVAS_WIDTH / rect.width);
+    const cmFromPMMA = (canvasX - (PMMA_X + PMMA_VISUAL_THICKNESS)) / PX_PER_CM;
+
+    const clamped = Math.min(Math.max(Math.round(cmFromPMMA), 0), MAX_DISTANCE_CM);
+    setDistanceCm(clamped);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const canvasX = (e.clientX - rect.left) * (CANVAS_WIDTH / rect.width);
+    const canvasY = (e.clientY - rect.top) * (CANVAS_HEIGHT / rect.height);
+
+    const detectorX = PMMA_X + PMMA_VISUAL_THICKNESS + (distanceCm * PX_PER_CM);
+    const detectorTop = CENTER_Y - DETECTOR_HEIGHT / 2;
+
+    const hitBoxXMin = detectorX - 12;
+    const hitBoxXMax = detectorX + DETECTOR_WIDTH + 12;
+    const hitBoxYMin = detectorTop - 12;
+    const hitBoxYMax = detectorTop + DETECTOR_HEIGHT + 12;
+
+    const isHit = canvasX >= hitBoxXMin && canvasX <= hitBoxXMax && canvasY >= hitBoxYMin && canvasY <= hitBoxYMax;
+    if (isHit) {
+      setIsDraggingDetector(true);
+      canvasRef.current.setPointerCapture(e.pointerId);
+      updateDistanceFromPointer(e.clientX);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (isDraggingDetector) {
+      updateDistanceFromPointer(e.clientX);
+    }
+  };
+
+  const stopDragging = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (canvasRef.current?.hasPointerCapture(e.pointerId)) {
+      canvasRef.current.releasePointerCapture(e.pointerId);
+    }
+    setIsDraggingDetector(false);
+  };
+
   const handleReset = () => {
     setCounts(0);
     countsRef.current = 0;
@@ -504,11 +553,16 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            <canvas 
-                ref={canvasRef} 
-                width={CANVAS_WIDTH} 
+            <canvas
+                ref={canvasRef}
+                width={CANVAS_WIDTH}
                 height={CANVAS_HEIGHT}
                 className="w-full h-auto object-contain bg-gradient-to-b from-[#151b25] to-[#0d0e12]"
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={stopDragging}
+                onPointerCancel={stopDragging}
+                onPointerLeave={stopDragging}
             />
             
             <div className="p-4 bg-gray-900/50 border-t border-gray-800 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-gray-500 font-mono">
@@ -542,11 +596,11 @@ const App: React.FC = () => {
                         <span>Detector Position (d from PMMA)</span>
                         <span className="text-blue-400 font-mono">{distanceCm} cm</span>
                     </label>
-                    <input 
-                        type="range" 
-                        min="0" 
-                        max="150" 
-                        value={distanceCm} 
+                    <input
+                        type="range"
+                        min="0"
+                        max={MAX_DISTANCE_CM}
+                        value={distanceCm}
                         onChange={(e) => setDistanceCm(parseInt(e.target.value))}
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
                     />
